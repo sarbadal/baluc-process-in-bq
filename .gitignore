@@ -1,0 +1,16 @@
+.env/
+.venv/
+.vscode/
+.idea/
+.DS_Store
+
+storage/
+
+.env
+deploy.env
+
+__pycache__/
+*.pyc
+
+data/
+mappings/
