@@ -92,7 +92,15 @@ def pick_app_env_vars(env: dict[str, str]) -> dict[str, str]:
             raise ValueError(f"APP_ENV_KEYS contains missing keys: {missing_text}")
         return {key: env[key] for key in keys}
 
-    return {key: value for key, value in env.items() if key not in RESERVED_DEPLOY_KEYS}
+    app_env = {key: value for key, value in env.items() if key not in RESERVED_DEPLOY_KEYS}
+
+    # The function runtime config loader expects one of these values.
+    if "GOOGLE_CLOUD_PROJECT" in env and env["GOOGLE_CLOUD_PROJECT"].strip():
+        app_env["GOOGLE_CLOUD_PROJECT"] = env["GOOGLE_CLOUD_PROJECT"].strip()
+    if "PROJECT_ID" in env and env["PROJECT_ID"].strip():
+        app_env["PROJECT_ID"] = env["PROJECT_ID"].strip()
+
+    return app_env
 
 
 def build_command(env: dict[str, str]) -> list[str]:
@@ -195,3 +203,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+# python deployment.py --env-file deploy.env
