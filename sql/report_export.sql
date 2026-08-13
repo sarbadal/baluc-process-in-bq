@@ -27,6 +27,7 @@ stage_print_base AS (
     DATE(p.{print_date_column}) AS finalschdt
   FROM {fq_print} p
   WHERE DATE(p.{print_date_column}) BETWEEN @start_date AND @end_date
+    AND p.{print_caption_column} IS NOT NULL
 ),
 stage_print_enriched AS (
   SELECT
@@ -162,4 +163,4 @@ stage_final_report AS (
 )
 SELECT *
 FROM stage_final_report
-ORDER BY date, bu, caption, state, publication, pub_name
+ORDER BY bu, caption, state, publication, pub_name, date

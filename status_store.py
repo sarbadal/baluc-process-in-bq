@@ -12,13 +12,7 @@ from google.cloud import storage
 logger = logging.getLogger(__name__)
 
 
-def upsert_status_entry(
-    storage_client: storage.Client,
-    bucket_name: str,
-    status_object_name: str,
-    entry: dict[str, object],
-    history_limit: int,
-) -> None:
+def upsert_status_entry(storage_client: storage.Client, bucket_name: str, status_object_name: str, entry: dict[str, object], history_limit: int) -> None:
     """Insert or update one status row in report status JSON file."""
     rows = load_status_history(storage_client, bucket_name, status_object_name)
     report_id = str(entry.get("report_id", "")).strip()
@@ -40,11 +34,7 @@ def upsert_status_entry(
     blob.upload_from_string(payload, content_type="application/json")
 
 
-def load_status_history(
-    storage_client: storage.Client,
-    bucket_name: str,
-    status_object_name: str,
-) -> list[dict[str, object]]:
+def load_status_history(storage_client: storage.Client, bucket_name: str, status_object_name: str) -> list[dict[str, object]]:
     """Read report status JSON list from GCS."""
     blob = storage_client.bucket(bucket_name).blob(status_object_name)
     try:
