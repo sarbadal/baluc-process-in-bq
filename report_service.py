@@ -57,7 +57,9 @@ def process_report_request(request):
         end_date=end_date,
         report_id=report_id,
     )
-    output_gcs_uri = f"gs://{config['target_bucket']}/{output_object_name}"
+    output_object_prefix = output_object_name.removesuffix(".csv") + "_"
+    output_object_wildcard_name = output_object_prefix + "*.csv"
+    output_gcs_uri = f"gs://{config['target_bucket']}/{output_object_wildcard_name}"
 
     storage_client = storage.Client(project=str(config["project_id"]))
     bq_client = bigquery.Client(project=str(config["project_id"]))
@@ -106,6 +108,18 @@ def process_report_request(request):
         )
         query_job.result()
 
+        exported_objects = _find_exported_objects(
+            storage_client=storage_client,
+            bucket_name=str(config["target_bucket"]),
+            prefix=output_object_prefix,
+        )
+        report_file = exported_objects[0] if exported_objects else output_object_wildcard_name
+        download_url = (
+            build_download_url(str(config["target_bucket"]), report_file)
+            if exported_objects
+            else None
+        )
+
         completed_entry = {
             "report_id": report_id,
             "report_type": "BQ_PRINT",
@@ -115,10 +129,11 @@ def process_report_request(request):
             "updated_at": now_iso(),
             "status": "Completed",
             "success": True,
-            "csv_object_name": output_object_name,
-            "download_object_name": output_object_name,
-            "download_url": build_download_url(str(config["target_bucket"]), output_object_name),
-            "report_file": output_object_name,
+            "csv_object_name": report_file,
+            "download_object_name": report_file,
+            "download_url": download_url,
+            "report_file": report_file,
+            "report_files": exported_objects,
             "error": None,
         }
         upsert_status_entry(
@@ -135,7 +150,8 @@ def process_report_request(request):
                 "report_id": report_id,
                 "start_date": start_date,
                 "end_date": end_date,
-                "report_file": output_object_name,
+                "report_file": report_file,
+                "report_files": exported_objects,
                 "download_url": completed_entry["download_url"],
                 "status_object": str(config["status_object_name"]),
             },
@@ -198,3 +214,15 @@ def _handle_get_status(request):
         return json_response({"error": "Report not found."}, 404)
 
     return json_response({"reports": history}, 200)
+
+
+def _find_exported_objects(
+    storage_client: storage.Client,
+    bucket_name: str,
+    prefix: str,
+) -> list[str]:
+    """Return exported CSV object names for a report prefix, sorted by name."""
+    blobs = storage_client.list_blobs(bucket_or_name=bucket_name, prefix=prefix)
+    names = [blob.name for blob in blobs if blob.name.endswith(".csv")]
+    names.sort()
+    return names
