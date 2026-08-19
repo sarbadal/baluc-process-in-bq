@@ -48,20 +48,18 @@ stage_print_grouped AS (
   SELECT
     bu,
     caption,
-    ppl,
     state,
     publication,
     pub_name,
     finalschdt,
     COUNT(1) AS row_count
   FROM stage_print_enriched
-  GROUP BY 1, 2, 3, 4, 5, 6, 7
+  GROUP BY 1, 2, 3, 4, 5, 6
 ),
 stage_print_windows AS (
   SELECT
     bu,
     caption,
-    ppl,
     state,
     publication,
     pub_name,
@@ -100,26 +98,24 @@ stage_ev_grouped AS (
     mpc.bu,
     mpc.caption,
     sef.state,
-    sef.zone,
     sef.event_date,
     SUM(sef.gf_opportunity_created) AS total_gf_opportunity_created
   FROM stage_ev_filtered sef
   LEFT JOIN stage_mapping_ppl_caption_bu mpc
     ON sef.ppl = mpc.ppl
-  GROUP BY 1, 2, 3, 4, 5
+  GROUP BY 1, 2, 3, 4
 ),
 stage_contract_grouped AS (
   SELECT
     mpc.bu,
     mpc.caption,
     scf.state,
-    scf.zone,
     scf.event_date,
     SUM(scf.gf_opportunity_created) AS total_gf_opportunity_created
   FROM stage_contract_filtered scf
   LEFT JOIN stage_mapping_ppl_caption_bu mpc
     ON scf.ppl = mpc.ppl
-  GROUP BY 1, 2, 3, 4, 5
+  GROUP BY 1, 2, 3, 4
 ),
 stage_final_report AS (
   SELECT
