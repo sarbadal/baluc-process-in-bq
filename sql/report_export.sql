@@ -134,11 +134,79 @@ stage_final_report AS (
     ev_t.total_gf_opportunity_created AS ev_enquery_count_date_t,
     ev_p1.total_gf_opportunity_created AS ev_enquery_count_date_p1,
     ev_p2.total_gf_opportunity_created AS ev_enquery_count_date_p2,
+    CASE
+      WHEN ev_m2.total_gf_opportunity_created IS NULL
+        AND ev_m1.total_gf_opportunity_created IS NULL THEN NULL
+      ELSE (COALESCE(ev_m2.total_gf_opportunity_created, 0) + COALESCE(ev_m1.total_gf_opportunity_created, 0)) / 2
+    END AS ev_perf_enquery_count_date_m2_m1_avg,
+    ev_t.total_gf_opportunity_created AS ev_perf_enquery_count_date_t_avg,
+    CASE
+      WHEN ev_p2.total_gf_opportunity_created IS NULL
+        AND ev_p1.total_gf_opportunity_created IS NULL THEN NULL
+      ELSE (COALESCE(ev_p2.total_gf_opportunity_created, 0) + COALESCE(ev_p1.total_gf_opportunity_created, 0)) / 2
+    END AS ev_perf_enquery_count_date_p2_p1_avg,
+    IFNULL(
+      SAFE_DIVIDE(
+        COALESCE(ev_t.total_gf_opportunity_created, 0),
+        CASE
+          WHEN ev_m2.total_gf_opportunity_created IS NULL
+            AND ev_m1.total_gf_opportunity_created IS NULL THEN NULL
+          ELSE (COALESCE(ev_m2.total_gf_opportunity_created, 0) + COALESCE(ev_m1.total_gf_opportunity_created, 0)) / 2
+        END
+      ) - 1,
+      0
+    ) AS ev_growth_enquery_count_date_t_vs_m2_avg,
+    IFNULL(
+      SAFE_DIVIDE(
+        CASE
+          WHEN ev_p2.total_gf_opportunity_created IS NULL
+            AND ev_p1.total_gf_opportunity_created IS NULL THEN NULL
+          ELSE (COALESCE(ev_p2.total_gf_opportunity_created, 0) + COALESCE(ev_p1.total_gf_opportunity_created, 0)) / 2
+        END,
+        COALESCE(ev_t.total_gf_opportunity_created, 0)
+      ) - 1,
+      0
+    ) AS ev_growth_enquery_count_date_p2_vs_t_avg,
+    
     pv_m2.total_gf_opportunity_created AS pv_enquery_count_date_m2,
     pv_m1.total_gf_opportunity_created AS pv_enquery_count_date_m1,
     pv_t.total_gf_opportunity_created AS pv_enquery_count_date_t,
     pv_p1.total_gf_opportunity_created AS pv_enquery_count_date_p1,
-    pv_p2.total_gf_opportunity_created AS pv_enquery_count_date_p2
+    pv_p2.total_gf_opportunity_created AS pv_enquery_count_date_p2,
+    CASE
+      WHEN pv_m2.total_gf_opportunity_created IS NULL
+        AND pv_m1.total_gf_opportunity_created IS NULL THEN NULL
+      ELSE (COALESCE(pv_m2.total_gf_opportunity_created, 0) + COALESCE(pv_m1.total_gf_opportunity_created, 0)) / 2
+    END AS pv_perf_enquery_count_date_m2_m1_avg,
+    pv_t.total_gf_opportunity_created AS pv_perf_enquery_count_date_t_avg,
+    CASE
+      WHEN pv_p2.total_gf_opportunity_created IS NULL
+        AND pv_p1.total_gf_opportunity_created IS NULL THEN NULL
+      ELSE (COALESCE(pv_p2.total_gf_opportunity_created, 0) + COALESCE(pv_p1.total_gf_opportunity_created, 0)) / 2
+    END AS pv_perf_enquery_count_date_p2_p1_avg,
+    IFNULL(
+      SAFE_DIVIDE(
+        COALESCE(pv_t.total_gf_opportunity_created, 0),
+        CASE
+          WHEN pv_m2.total_gf_opportunity_created IS NULL
+            AND pv_m1.total_gf_opportunity_created IS NULL THEN NULL
+          ELSE (COALESCE(pv_m2.total_gf_opportunity_created, 0) + COALESCE(pv_m1.total_gf_opportunity_created, 0)) / 2
+        END
+      ) - 1,
+      0
+    ) AS pv_growth_enquery_count_date_t_vs_m2_avg,
+    IFNULL(
+      SAFE_DIVIDE(
+        CASE
+          WHEN pv_p2.total_gf_opportunity_created IS NULL
+            AND pv_p1.total_gf_opportunity_created IS NULL THEN NULL
+          ELSE (COALESCE(pv_p2.total_gf_opportunity_created, 0) + COALESCE(pv_p1.total_gf_opportunity_created, 0)) / 2
+        END,
+        COALESCE(pv_t.total_gf_opportunity_created, 0)
+      ) - 1,
+      0
+    ) AS pv_growth_enquery_count_date_p2_vs_t_avg
+
   FROM stage_print_windows p
   LEFT JOIN stage_ev_grouped ev_m2
     ON p.bu = ev_m2.bu AND p.caption = ev_m2.caption AND p.state = ev_m2.state AND p.date_m2 = ev_m2.event_date
