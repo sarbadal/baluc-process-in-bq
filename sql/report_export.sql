@@ -23,7 +23,7 @@ stage_print_base AS (
   SELECT
     CAST(p.{print_caption_column} AS STRING) AS caption,
     CAST(p.{print_pub_name_column} AS STRING) AS pub_name,
-    CAST(p.{print_state_column} AS STRING) AS state,
+    COALESCE(CAST(p.{print_state_column} AS STRING), 'Telangana') AS state,
     DATE(p.{print_date_column}) AS finalschdt
   FROM {fq_print} p
   WHERE DATE(p.{print_date_column}) BETWEEN @start_date AND @end_date
