@@ -13,12 +13,6 @@ stage_mapping_ppl_caption_bu AS (
     CAST({mapping_bu_column} AS STRING) AS bu
   FROM {fq_mapping_ppl}
 ),
-stage_mapping_publication AS (
-  SELECT DISTINCT
-    CAST({publication_map_pub_name_column} AS STRING) AS pub_name,
-    CAST({publication_map_publication_column} AS STRING) AS publication
-  FROM {fq_mapping_publication}
-),
 stage_print_base AS (
   SELECT
     CAST(p.{print_caption_column} AS STRING) AS caption,
@@ -35,33 +29,28 @@ stage_print_enriched AS (
     spb.caption,
     mpc.ppl,
     spb.state,
-    mp.publication,
     spb.pub_name,
     spb.finalschdt
   FROM stage_print_base spb
   LEFT JOIN stage_mapping_ppl_caption_bu mpc
     ON spb.caption = mpc.caption
-  LEFT JOIN stage_mapping_publication mp
-    ON spb.pub_name = mp.pub_name
 ),
 stage_print_grouped AS (
   SELECT
     bu,
     caption,
     state,
-    publication,
     pub_name,
     finalschdt,
     COUNT(1) AS row_count
   FROM stage_print_enriched
-  GROUP BY 1, 2, 3, 4, 5, 6
+  GROUP BY 1, 2, 3, 4, 5
 ),
 stage_print_windows AS (
   SELECT
     bu,
     caption,
     state,
-    publication,
     pub_name,
     finalschdt,
     DATE_SUB(finalschdt, INTERVAL 2 DAY) AS date_m2,
@@ -122,7 +111,6 @@ stage_final_report AS (
     p.bu,
     p.caption,
     p.state,
-    p.publication,
     p.pub_name,
     p.finalschdt AS date,
     ev_m2.total_gf_opportunity_created AS ev_enquery_count_date_m2,
@@ -227,4 +215,4 @@ stage_final_report AS (
 )
 SELECT *
 FROM stage_final_report
-ORDER BY bu, caption, state, publication, pub_name, date
+ORDER BY bu, caption, state, pub_name, date
