@@ -1,11 +1,14 @@
 EXPORT DATA OPTIONS (
-  uri='{output_gcs_uri}',
+  uri='{output_gcs_uri}', -- GCS URI for the exported CSV file
   format='CSV',
   overwrite=true,
   header=true,
   field_delimiter=','
 ) AS
 WITH
+-- Lookup table for mapping people, captions, and business units
+-- EV and PV fact tables don't have caption to join with Print fact table
+-- This lookup table is needed to map ppl to captions and business units
 stage_mapping_ppl_caption_bu AS (
   SELECT DISTINCT
     CAST({mapping_ppl_column} AS STRING) AS ppl,
@@ -17,11 +20,11 @@ stage_print_base AS (
   SELECT
     CAST(p.{print_caption_column} AS STRING) AS caption,
     CAST(p.{print_pub_name_column} AS STRING) AS pub_name,
-    COALESCE(CAST(p.{print_state_column} AS STRING), 'Telangana') AS state,
+    COALESCE(CAST(p.{print_state_column} AS STRING), 'Telangana') AS state, -- Default to 'Telangana' if state is NULL
     DATE(p.{print_date_column}) AS finalschdt
   FROM {fq_print} p
-  WHERE DATE(p.{print_date_column}) BETWEEN @start_date AND @end_date
-    AND p.{print_caption_column} IS NOT NULL
+  WHERE DATE(p.{print_date_column}) BETWEEN @start_date AND @end_date -- Filter by the specified date range
+    AND p.{print_caption_column} IS NOT NULL -- Ensure that the caption is not NULL
 ),
 stage_print_enriched AS (
   SELECT

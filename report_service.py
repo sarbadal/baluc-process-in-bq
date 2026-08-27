@@ -11,6 +11,8 @@ from google.cloud import storage
 from config import load_config
 from responses import json_response
 from sql_builder import build_bq_sql_script
+from status_store import LoadStatusHistoryParams
+from status_store import UpsertStatusEntryParams
 from status_store import load_status_history
 from status_store import upsert_status_entry
 from utils import build_download_url
@@ -80,11 +82,13 @@ def process_report_request(request):
         "error": None,
     }
     upsert_status_entry(
-        storage_client=storage_client,
-        bucket_name=str(config["target_bucket"]),
-        status_object_name=str(config["status_object_name"]),
-        entry=generating_entry,
-        history_limit=int(config["status_history_limit"]),
+        UpsertStatusEntryParams(
+            storage_client=storage_client,
+            bucket_name=str(config["target_bucket"]),
+            status_object_name=str(config["status_object_name"]),
+            entry=generating_entry,
+            history_limit=int(config["status_history_limit"]),
+        )
     )
 
     try:
@@ -137,11 +141,13 @@ def process_report_request(request):
             "error": None,
         }
         upsert_status_entry(
-            storage_client=storage_client,
-            bucket_name=str(config["target_bucket"]),
-            status_object_name=str(config["status_object_name"]),
-            entry=completed_entry,
-            history_limit=int(config["status_history_limit"]),
+            UpsertStatusEntryParams(
+                storage_client=storage_client,
+                bucket_name=str(config["target_bucket"]),
+                status_object_name=str(config["status_object_name"]),
+                entry=completed_entry,
+                history_limit=int(config["status_history_limit"]),
+            )
         )
 
         return json_response(
@@ -175,11 +181,13 @@ def process_report_request(request):
             "error": str(exc),
         }
         upsert_status_entry(
-            storage_client=storage_client,
-            bucket_name=str(config["target_bucket"]),
-            status_object_name=str(config["status_object_name"]),
-            entry=failed_entry,
-            history_limit=int(config["status_history_limit"]),
+            UpsertStatusEntryParams(
+                storage_client=storage_client,
+                bucket_name=str(config["target_bucket"]),
+                status_object_name=str(config["status_object_name"]),
+                entry=failed_entry,
+                history_limit=int(config["status_history_limit"]),
+            )
         )
         return json_response(
             {
@@ -202,9 +210,11 @@ def _handle_get_status(request):
     report_id = str(request.args.get("report_id", "")).strip()
     storage_client = storage.Client(project=str(config["project_id"]))
     history = load_status_history(
-        storage_client=storage_client,
-        bucket_name=str(config["target_bucket"]),
-        status_object_name=str(config["status_object_name"]),
+        LoadStatusHistoryParams(
+            storage_client=storage_client,
+            bucket_name=str(config["target_bucket"]),
+            status_object_name=str(config["status_object_name"]),
+        )
     )
 
     if report_id:

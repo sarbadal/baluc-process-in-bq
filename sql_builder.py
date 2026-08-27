@@ -10,7 +10,19 @@ SQL_TEMPLATE = SQL_TEMPLATE_PATH.read_text(encoding="utf-8")
 
 
 def build_bq_sql_script(config: dict[str, str | int], output_gcs_uri: str) -> str:
-    """Build SQL script that mirrors existing pandas business logic using BigQuery CTEs."""
+    """Build a parameterized BigQuery SQL script for report export.
+
+    Uses configured table names and column mappings to render the SQL template
+    that computes report metrics and exports the result to Cloud Storage.
+
+    Args:
+        config: Runtime configuration containing project, dataset, table, and
+            column identifier settings used by the SQL template.
+        output_gcs_uri: Destination GCS URI pattern used by BigQuery EXPORT DATA.
+
+    Returns:
+        Fully rendered SQL script ready to run with BigQuery query parameters.
+    """
     project_id = str(config["project_id"])
     dataset = str(config["bq_dataset"])
 
@@ -52,7 +64,7 @@ def build_bq_sql_script(config: dict[str, str | int], output_gcs_uri: str) -> st
     fq_mapping_ppl = f"`{project_id}.{dataset}.{mapping_ppl_table}`"
     fq_mapping_publication = f"`{project_id}.{dataset}.{mapping_publication_table}`"
 
-    return SQL_TEMPLATE.format(
+    query = SQL_TEMPLATE.format(
         output_gcs_uri=output_gcs_uri,
         mapping_ppl_column=mapping_ppl_column,
         mapping_caption_column=mapping_caption_column,
@@ -81,3 +93,5 @@ def build_bq_sql_script(config: dict[str, str | int], output_gcs_uri: str) -> st
         fq_ev=fq_ev,
         fq_contract=fq_contract,
     ).strip()
+    print(query)
+    return query
