@@ -1,5 +1,5 @@
 EXPORT DATA OPTIONS (
-  uri='{output_gcs_uri}', -- GCS URI for the exported CSV file
+  uri='gs://reports-baluc/reports/generated/report_20260917_131648_20260701_20260717_e0fa5fe9_*.csv', -- GCS URI for the exported CSV file
   format='CSV',
   overwrite=true,
   header=true,
@@ -11,20 +11,20 @@ WITH
 -- This lookup table is needed to map ppl to captions and business units
 stage_mapping_ppl_caption_bu AS (
   SELECT DISTINCT
-    CAST({mapping_ppl_column} AS STRING) AS ppl,
-    CAST({mapping_caption_column} AS STRING) AS caption,
-    CAST({mapping_bu_column} AS STRING) AS bu
-  FROM {fq_mapping_ppl}
+    CAST(ppl AS STRING) AS ppl,
+    CAST(caption AS STRING) AS caption,
+    CAST(bu AS STRING) AS bu
+  FROM `balu-c.reporting_dataset.mapping_ppl_caption_bu`
 ),
 stage_print_base AS (
   SELECT
-    CAST(p.{print_caption_column} AS STRING) AS caption,
-    CAST(p.{print_pub_name_column} AS STRING) AS pub_name,
-    COALESCE(CAST(p.{print_state_column} AS STRING), 'Telangana') AS state, -- Default to 'Telangana' if state is NULL
-    DATE(p.{print_date_column}) AS finalschdt
-  FROM {fq_print} p
-  WHERE DATE(p.{print_date_column}) BETWEEN @start_date AND @end_date -- Filter by the specified date range
-    AND p.{print_caption_column} IS NOT NULL -- Ensure that the caption is not NULL
+    CAST(p.caption AS STRING) AS caption,
+    CAST(p.pub_name AS STRING) AS pub_name,
+    COALESCE(CAST(p.state AS STRING), 'Telangana') AS state, -- Default to 'Telangana' if state is NULL
+    DATE(p.finalschdt) AS finalschdt
+  FROM `balu-c.reporting_dataset.print` p
+  WHERE DATE(p.finalschdt) BETWEEN DATE '2026-08-01' AND DATE '2026-08-31' -- Filter by the specified date range
+    AND p.caption IS NOT NULL -- Ensure that the caption is not NULL
 ),
 stage_print_enriched AS (
   SELECT
@@ -67,25 +67,25 @@ stage_print_windows AS (
 ),
 stage_ev_filtered AS (
   SELECT
-    CAST(e.{ev_ppl_column} AS STRING) AS ppl,
-    CAST(e.{ev_state_column} AS STRING) AS state,
-    CAST(e.{ev_zone_column} AS STRING) AS zone,
-    DATE(e.{ev_date_column}) AS event_date,
-    SAFE_CAST(e.{ev_metric_column} AS FLOAT64) AS gf_opportunity_created
-  FROM {fq_ev} e
-  WHERE DATE(e.{ev_date_column}) BETWEEN DATE_SUB(@start_date, INTERVAL 2 DAY) AND DATE_ADD(@end_date, INTERVAL 2 DAY)
-    AND (@ev_source_filter = '' OR LOWER(CAST(e.{ev_source_column} AS STRING)) = LOWER(@ev_source_filter))
+    CAST(e.ppl AS STRING) AS ppl,
+    CAST(e.state AS STRING) AS state,
+    CAST(e.zone AS STRING) AS zone,
+    DATE(e.event_date) AS event_date,
+    SAFE_CAST(e.gf_opportunity_created AS FLOAT64) AS gf_opportunity_created
+  FROM `balu-c.reporting_dataset.ev` e
+  WHERE DATE(e.event_date) BETWEEN DATE '2026-07-30' AND DATE '2026-09-02'
+    AND (@ev_source_filter = '' OR LOWER(CAST(e.source AS STRING)) = LOWER(@ev_source_filter))
 ),
 stage_contract_filtered AS (
   SELECT
-    CAST(c.{contract_ppl_column} AS STRING) AS ppl,
-    CAST(c.{contract_state_column} AS STRING) AS state,
-    CAST(c.{contract_zone_column} AS STRING) AS zone,
-    DATE(c.{contract_date_column}) AS event_date,
-    SAFE_CAST(c.{contract_metric_column} AS FLOAT64) AS gf_opportunity_created
-  FROM {fq_contract} c
-  WHERE DATE(c.{contract_date_column}) BETWEEN DATE_SUB(@start_date, INTERVAL 2 DAY) AND DATE_ADD(@end_date, INTERVAL 2 DAY)
-    AND (@contract_source_filter = '' OR LOWER(CAST(c.{contract_source_column} AS STRING)) = LOWER(@contract_source_filter))
+    CAST(c.ppl AS STRING) AS ppl,
+    CAST(c.state AS STRING) AS state,
+    CAST(c.zone AS STRING) AS zone,
+    DATE(c.event_date) AS event_date,
+    SAFE_CAST(c.gf_opportunity_created AS FLOAT64) AS gf_opportunity_created
+  FROM `balu-c.reporting_dataset.contact` c
+  WHERE DATE(c.event_date) BETWEEN DATE '2026-07-30' AND DATE '2026-09-02'
+    AND (@contract_source_filter = '' OR LOWER(CAST(c.source AS STRING)) = LOWER(@contract_source_filter))
 ),
 stage_ev_grouped AS (
   SELECT
