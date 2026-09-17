@@ -253,37 +253,37 @@ stage_final_report AS (
 
   FROM stage_print_windows p
   LEFT JOIN stage_ev_grouped ev_m2
-    ON p.caption = ev_m2.caption AND p.state = ev_m2.state AND p.date_m2 = ev_m2.event_date
+    ON p.ppl = ev_m2.ppl AND p.caption = ev_m2.caption AND p.state = ev_m2.state AND p.date_m2 = ev_m2.event_date
   LEFT JOIN stage_ev_grouped ev_m1
-    ON p.caption = ev_m1.caption AND p.state = ev_m1.state AND p.date_m1 = ev_m1.event_date
+    ON p.ppl = ev_m1.ppl AND p.caption = ev_m1.caption AND p.state = ev_m1.state AND p.date_m1 = ev_m1.event_date
   LEFT JOIN stage_ev_grouped ev_t
-    ON p.caption = ev_t.caption AND p.state = ev_t.state AND p.date_t = ev_t.event_date
+    ON p.ppl = ev_t.ppl AND p.caption = ev_t.caption AND p.state = ev_t.state AND p.date_t = ev_t.event_date
   LEFT JOIN stage_ev_grouped ev_p1
-    ON p.caption = ev_p1.caption AND p.state = ev_p1.state AND p.date_p1 = ev_p1.event_date
+    ON p.ppl = ev_p1.ppl AND p.caption = ev_p1.caption AND p.state = ev_p1.state AND p.date_p1 = ev_p1.event_date
   LEFT JOIN stage_ev_grouped ev_p2
-    ON p.caption = ev_p2.caption AND p.state = ev_p2.state AND p.date_p2 = ev_p2.event_date
+    ON p.ppl = ev_p2.ppl AND p.caption = ev_p2.caption AND p.state = ev_p2.state AND p.date_p2 = ev_p2.event_date
   LEFT JOIN stage_contract_grouped pv_m2
-    ON p.caption = pv_m2.caption AND p.state = pv_m2.state AND p.date_m2 = pv_m2.event_date
+    ON p.ppl = pv_m2.ppl AND p.caption = pv_m2.caption AND p.state = pv_m2.state AND p.date_m2 = pv_m2.event_date
   LEFT JOIN stage_contract_grouped pv_m1
-    ON p.caption = pv_m1.caption AND p.state = pv_m1.state AND p.date_m1 = pv_m1.event_date
+    ON p.ppl = pv_m1.ppl AND p.caption = pv_m1.caption AND p.state = pv_m1.state AND p.date_m1 = pv_m1.event_date
   LEFT JOIN stage_contract_grouped pv_t
-    ON p.caption = pv_t.caption AND p.state = pv_t.state AND p.date_t = pv_t.event_date
+    ON p.ppl = pv_t.ppl AND p.caption = pv_t.caption AND p.state = pv_t.state AND p.date_t = pv_t.event_date
   LEFT JOIN stage_contract_grouped pv_p1
-    ON p.caption = pv_p1.caption AND p.state = pv_p1.state AND p.date_p1 = pv_p1.event_date
+    ON p.ppl = pv_p1.ppl AND p.caption = pv_p1.caption AND p.state = pv_p1.state AND p.date_p1 = pv_p1.event_date
   LEFT JOIN stage_contract_grouped pv_p2
-    ON p.caption = pv_p2.caption AND p.state = pv_p2.state AND p.date_p2 = pv_p2.event_date
+    ON p.ppl = pv_p2.ppl AND p.caption = pv_p2.caption AND p.state = pv_p2.state AND p.date_p2 = pv_p2.event_date
 
   LEFT JOIN stage_ev_contract_combined evc_m2
-    ON p.caption = evc_m2.caption AND p.state = evc_m2.state AND p.date_m2 = evc_m2.event_date
+    ON p.ppl = evc_m2.ppl AND p.caption = evc_m2.caption AND p.state = evc_m2.state AND p.date_m2 = evc_m2.event_date
   LEFT JOIN stage_ev_contract_combined evc_m1
-    ON p.caption = evc_m1.caption AND p.state = evc_m1.state AND p.date_m1 = evc_m1.event_date
+    ON p.ppl = evc_m1.ppl AND p.caption = evc_m1.caption AND p.state = evc_m1.state AND p.date_m1 = evc_m1.event_date
   LEFT JOIN stage_ev_contract_combined evc_t
-    ON p.caption = evc_t.caption AND p.state = evc_t.state AND p.date_t = evc_t.event_date
+    ON p.ppl = evc_t.ppl AND p.caption = evc_t.caption AND p.state = evc_t.state AND p.date_t = evc_t.event_date
   LEFT JOIN stage_ev_contract_combined evc_p1
-    ON p.caption = evc_p1.caption AND p.state = evc_p1.state AND p.date_p1 = evc_p1.event_date
+    ON p.ppl = evc_p1.ppl AND p.caption = evc_p1.caption AND p.state = evc_p1.state AND p.date_p1 = evc_p1.event_date
   LEFT JOIN stage_ev_contract_combined evc_p2
-    ON p.caption = evc_p2.caption AND p.state = evc_p2.state AND p.date_p2 = evc_p2.event_date
+    ON p.ppl = evc_p2.ppl AND p.caption = evc_p2.caption AND p.state = evc_p2.state AND p.date_p2 = evc_p2.event_date
 )
 SELECT *
 FROM stage_final_report
-ORDER BY caption, state, pub_name, date
+ORDER BY caption, ppl, state, pub_name, date
