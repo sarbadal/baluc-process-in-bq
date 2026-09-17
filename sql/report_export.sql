@@ -115,16 +115,17 @@ stage_contract_grouped AS (
 ),
 stage_ev_contract_combined AS (
   SELECT
+    ppl,
     caption,
     state,
     event_date,
     SUM(total_gf_opportunity_created) AS total_gf_opportunity_created
   FROM (
-    SELECT caption, state, event_date, total_gf_opportunity_created FROM stage_ev_grouped
+    SELECT ppl, caption, state, event_date, total_gf_opportunity_created FROM stage_ev_grouped
     UNION ALL
-    SELECT caption, state, event_date, total_gf_opportunity_created FROM stage_contract_grouped
+    SELECT ppl, caption, state, event_date, total_gf_opportunity_created FROM stage_contract_grouped
   )
-  GROUP BY 1, 2, 3
+  GROUP BY 1, 2, 3, 4
 ),
 stage_final_report AS (
   SELECT
