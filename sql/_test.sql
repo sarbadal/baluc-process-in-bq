@@ -1,5 +1,5 @@
 EXPORT DATA OPTIONS (
-  uri='gs://reports-baluc/reports/generated/report_20260917_131648_20260701_20260717_e0fa5fe9_*.csv', -- GCS URI for the exported CSV file
+  uri='{output_gcs_uri}', -- GCS URI for the exported CSV file
   format='CSV',
   overwrite=true,
   header=true,
@@ -11,20 +11,20 @@ WITH
 -- This lookup table is needed to map ppl to captions and business units
 stage_mapping_ppl_caption_bu AS (
   SELECT DISTINCT
-    CAST(ppl AS STRING) AS ppl,
-    CAST(caption AS STRING) AS caption,
-    CAST(bu AS STRING) AS bu
-  FROM `balu-c.reporting_dataset.mapping_ppl_caption_bu`
+    CAST({mapping_ppl_column} AS STRING) AS ppl,
+    CAST({mapping_caption_column} AS STRING) AS caption,
+    CAST({mapping_bu_column} AS STRING) AS bu
+  FROM {fq_mapping_ppl}
 ),
 stage_print_base AS (
   SELECT
-    CAST(p.caption AS STRING) AS caption,
-    CAST(p.pub_name AS STRING) AS pub_name,
-    COALESCE(CAST(p.state AS STRING), 'Telangana') AS state, -- Default to 'Telangana' if state is NULL
-    DATE(p.finalschdt) AS finalschdt
-  FROM `balu-c.reporting_dataset.print` p
-  WHERE DATE(p.finalschdt) BETWEEN DATE '2026-08-01' AND DATE '2026-08-31' -- Filter by the specified date range
-    AND p.caption IS NOT NULL -- Ensure that the caption is not NULL
+    CAST(p.{print_caption_column} AS STRING) AS caption,
+    CAST(p.{print_pub_name_column} AS STRING) AS pub_name,
+    COALESCE(CAST(p.{print_state_column} AS STRING), 'Telangana') AS state, -- Default to 'Telangana' if state is NULL
+    DATE(p.{print_date_column}) AS finalschdt
+  FROM {fq_print} p
+  WHERE DATE(p.{print_date_column}) BETWEEN @start_date AND @end_date -- Filter by the specified date range
+    AND p.{print_caption_column} IS NOT NULL -- Ensure that the caption is not NULL
 ),
 stage_print_enriched AS (
   SELECT
@@ -67,25 +67,25 @@ stage_print_windows AS (
 ),
 stage_ev_filtered AS (
   SELECT
-    CAST(e.ppl AS STRING) AS ppl,
-    CAST(e.state AS STRING) AS state,
-    CAST(e.zone AS STRING) AS zone,
-    DATE(e.event_date) AS event_date,
-    SAFE_CAST(e.gf_opportunity_created AS FLOAT64) AS gf_opportunity_created
-  FROM `balu-c.reporting_dataset.ev` e
-  WHERE DATE(e.event_date) BETWEEN DATE '2026-07-30' AND DATE '2026-09-02'
-    AND (@ev_source_filter = '' OR LOWER(CAST(e.source AS STRING)) = LOWER(@ev_source_filter))
+    CAST(e.{ev_ppl_column} AS STRING) AS ppl,
+    CAST(e.{ev_state_column} AS STRING) AS state,
+    CAST(e.{ev_zone_column} AS STRING) AS zone,
+    DATE(e.{ev_date_column}) AS event_date,
+    SAFE_CAST(e.{ev_metric_column} AS FLOAT64) AS gf_opportunity_created
+  FROM {fq_ev} e
+  WHERE DATE(e.{ev_date_column}) BETWEEN DATE_SUB(@start_date, INTERVAL 2 DAY) AND DATE_ADD(@end_date, INTERVAL 2 DAY)
+    AND (@ev_source_filter = '' OR LOWER(CAST(e.{ev_source_column} AS STRING)) = LOWER(@ev_source_filter))
 ),
 stage_contract_filtered AS (
   SELECT
-    CAST(c.ppl AS STRING) AS ppl,
-    CAST(c.state AS STRING) AS state,
-    CAST(c.zone AS STRING) AS zone,
-    DATE(c.event_date) AS event_date,
-    SAFE_CAST(c.gf_opportunity_created AS FLOAT64) AS gf_opportunity_created
-  FROM `balu-c.reporting_dataset.contact` c
-  WHERE DATE(c.event_date) BETWEEN DATE '2026-07-30' AND DATE '2026-09-02'
-    AND (@contract_source_filter = '' OR LOWER(CAST(c.source AS STRING)) = LOWER(@contract_source_filter))
+    CAST(c.{contract_ppl_column} AS STRING) AS ppl,
+    CAST(c.{contract_state_column} AS STRING) AS state,
+    CAST(c.{contract_zone_column} AS STRING) AS zone,
+    DATE(c.{contract_date_column}) AS event_date,
+    SAFE_CAST(c.{contract_metric_column} AS FLOAT64) AS gf_opportunity_created
+  FROM {fq_contract} c
+  WHERE DATE(c.{contract_date_column}) BETWEEN DATE_SUB(@start_date, INTERVAL 2 DAY) AND DATE_ADD(@end_date, INTERVAL 2 DAY)
+    AND (@contract_source_filter = '' OR LOWER(CAST(c.{contract_source_column} AS STRING)) = LOWER(@contract_source_filter))
 ),
 stage_ev_grouped AS (
   SELECT
@@ -115,16 +115,17 @@ stage_contract_grouped AS (
 ),
 stage_ev_contract_combined AS (
   SELECT
+    ppl,
     caption,
     state,
     event_date,
     SUM(total_gf_opportunity_created) AS total_gf_opportunity_created
   FROM (
-    SELECT caption, state, event_date, total_gf_opportunity_created FROM stage_ev_grouped
+    SELECT ppl, caption, state, event_date, total_gf_opportunity_created FROM stage_ev_grouped
     UNION ALL
-    SELECT caption, state, event_date, total_gf_opportunity_created FROM stage_contract_grouped
+    SELECT ppl, caption, state, event_date, total_gf_opportunity_created FROM stage_contract_grouped
   )
-  GROUP BY 1, 2, 3
+  GROUP BY 1, 2, 3, 4
 ),
 stage_final_report AS (
   SELECT
@@ -253,37 +254,37 @@ stage_final_report AS (
 
   FROM stage_print_windows p
   LEFT JOIN stage_ev_grouped ev_m2
-    ON p.caption = ev_m2.caption AND p.state = ev_m2.state AND p.date_m2 = ev_m2.event_date
+    ON p.ppl = ev_m2.ppl AND p.caption = ev_m2.caption AND p.state = ev_m2.state AND p.date_m2 = ev_m2.event_date
   LEFT JOIN stage_ev_grouped ev_m1
-    ON p.caption = ev_m1.caption AND p.state = ev_m1.state AND p.date_m1 = ev_m1.event_date
+    ON p.ppl = ev_m1.ppl AND p.caption = ev_m1.caption AND p.state = ev_m1.state AND p.date_m1 = ev_m1.event_date
   LEFT JOIN stage_ev_grouped ev_t
-    ON p.caption = ev_t.caption AND p.state = ev_t.state AND p.date_t = ev_t.event_date
+    ON p.ppl = ev_t.ppl AND p.caption = ev_t.caption AND p.state = ev_t.state AND p.date_t = ev_t.event_date
   LEFT JOIN stage_ev_grouped ev_p1
-    ON p.caption = ev_p1.caption AND p.state = ev_p1.state AND p.date_p1 = ev_p1.event_date
+    ON p.ppl = ev_p1.ppl AND p.caption = ev_p1.caption AND p.state = ev_p1.state AND p.date_p1 = ev_p1.event_date
   LEFT JOIN stage_ev_grouped ev_p2
-    ON p.caption = ev_p2.caption AND p.state = ev_p2.state AND p.date_p2 = ev_p2.event_date
+    ON p.ppl = ev_p2.ppl AND p.caption = ev_p2.caption AND p.state = ev_p2.state AND p.date_p2 = ev_p2.event_date
   LEFT JOIN stage_contract_grouped pv_m2
-    ON p.caption = pv_m2.caption AND p.state = pv_m2.state AND p.date_m2 = pv_m2.event_date
+    ON p.ppl = pv_m2.ppl AND p.caption = pv_m2.caption AND p.state = pv_m2.state AND p.date_m2 = pv_m2.event_date
   LEFT JOIN stage_contract_grouped pv_m1
-    ON p.caption = pv_m1.caption AND p.state = pv_m1.state AND p.date_m1 = pv_m1.event_date
+    ON p.ppl = pv_m1.ppl AND p.caption = pv_m1.caption AND p.state = pv_m1.state AND p.date_m1 = pv_m1.event_date
   LEFT JOIN stage_contract_grouped pv_t
-    ON p.caption = pv_t.caption AND p.state = pv_t.state AND p.date_t = pv_t.event_date
+    ON p.ppl = pv_t.ppl AND p.caption = pv_t.caption AND p.state = pv_t.state AND p.date_t = pv_t.event_date
   LEFT JOIN stage_contract_grouped pv_p1
-    ON p.caption = pv_p1.caption AND p.state = pv_p1.state AND p.date_p1 = pv_p1.event_date
+    ON p.ppl = pv_p1.ppl AND p.caption = pv_p1.caption AND p.state = pv_p1.state AND p.date_p1 = pv_p1.event_date
   LEFT JOIN stage_contract_grouped pv_p2
-    ON p.caption = pv_p2.caption AND p.state = pv_p2.state AND p.date_p2 = pv_p2.event_date
+    ON p.ppl = pv_p2.ppl AND p.caption = pv_p2.caption AND p.state = pv_p2.state AND p.date_p2 = pv_p2.event_date
 
   LEFT JOIN stage_ev_contract_combined evc_m2
-    ON p.caption = evc_m2.caption AND p.state = evc_m2.state AND p.date_m2 = evc_m2.event_date
+    ON p.ppl = evc_m2.ppl AND p.caption = evc_m2.caption AND p.state = evc_m2.state AND p.date_m2 = evc_m2.event_date
   LEFT JOIN stage_ev_contract_combined evc_m1
-    ON p.caption = evc_m1.caption AND p.state = evc_m1.state AND p.date_m1 = evc_m1.event_date
+    ON p.ppl = evc_m1.ppl AND p.caption = evc_m1.caption AND p.state = evc_m1.state AND p.date_m1 = evc_m1.event_date
   LEFT JOIN stage_ev_contract_combined evc_t
-    ON p.caption = evc_t.caption AND p.state = evc_t.state AND p.date_t = evc_t.event_date
+    ON p.ppl = evc_t.ppl AND p.caption = evc_t.caption AND p.state = evc_t.state AND p.date_t = evc_t.event_date
   LEFT JOIN stage_ev_contract_combined evc_p1
-    ON p.caption = evc_p1.caption AND p.state = evc_p1.state AND p.date_p1 = evc_p1.event_date
+    ON p.ppl = evc_p1.ppl AND p.caption = evc_p1.caption AND p.state = evc_p1.state AND p.date_p1 = evc_p1.event_date
   LEFT JOIN stage_ev_contract_combined evc_p2
-    ON p.caption = evc_p2.caption AND p.state = evc_p2.state AND p.date_p2 = evc_p2.event_date
+    ON p.ppl = evc_p2.ppl AND p.caption = evc_p2.caption AND p.state = evc_p2.state AND p.date_p2 = evc_p2.event_date
 )
 SELECT *
 FROM stage_final_report
-ORDER BY caption, state, pub_name, date
+ORDER BY caption, ppl, state, pub_name, date
