@@ -438,9 +438,9 @@ stage_final_report_caption AS (
     ON p.ppl = evc_p2.ppl AND p.caption = evc_p2.caption AND p.state = evc_p2.state AND p.date_p2 = evc_p2.event_date
 ),
 stage_final_report AS (
-  stage_final_report_all
+  SELECT * FROM stage_final_report_all
   UNION ALL
-  stage_final_report_caption
+  SELECT * FROM stage_final_report_caption
 )
 -- Final report combining all and caption-specific reports
 SELECT *
