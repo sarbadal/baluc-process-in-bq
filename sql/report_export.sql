@@ -71,7 +71,7 @@ stage_print_windows_all_captions AS (
     'All' AS caption,
     'All' AS ppl,
     state,
-    pub_name,
+    'All' AS pub_name,
     finalschdt,
     DATE_SUB(finalschdt, INTERVAL 2 DAY) AS date_m2,
     DATE_SUB(finalschdt, INTERVAL 1 DAY) AS date_m1,
