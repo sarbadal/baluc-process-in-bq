@@ -149,9 +149,9 @@ stage_ev_all AS (
     'All' AS ppl,
     event_date, 
     state,
-    SUM(total_gf_opportunity_created) AS total_gf_opportunity_created
-  FROM stage_ev_grouped
-  GROUP BY bu, caption, ppl, event_date, state
+    SUM(gf_opportunity_created) AS total_gf_opportunity_created
+  FROM stage_ev_filtered
+  GROUP BY 'All', 'All', 'All', event_date, state
 ),
 stage_contract_all AS (
   SELECT 
@@ -160,9 +160,9 @@ stage_contract_all AS (
     'All' AS ppl,
     event_date, 
     state,
-    SUM(total_gf_opportunity_created) AS total_gf_opportunity_created
-  FROM stage_contract_grouped
-  GROUP BY bu, caption, ppl, event_date, state
+    SUM(gf_opportunity_created) AS total_gf_opportunity_created
+  FROM stage_contract_filtered
+  GROUP BY 'All', 'All', 'All', event_date, state
 ),
 stage_final_report_all AS (
   SELECT 
