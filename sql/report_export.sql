@@ -66,7 +66,7 @@ stage_print_windows AS (
   FROM stage_print_grouped
 ),
 stage_print_windows_all_captions AS (
-  SELECT
+  SELECT DISTINCT
     'All' AS bu,
     'All' AS caption,
     'All' AS ppl,
