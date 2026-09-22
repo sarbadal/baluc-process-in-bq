@@ -26,17 +26,43 @@ stage_print_base AS (
   WHERE DATE(p.{print_date_column}) BETWEEN @start_date AND @end_date -- Filter by the specified date range
     AND p.{print_caption_column} IS NOT NULL -- Ensure that the caption is not NULL
 ),
-stage_print_enriched AS (
+stage_print_enriched_rom AS (
   SELECT
     mpc.bu,
     spb.caption,
     mpc.ppl,
-    spb.state,
+    CASE 
+      WHEN spb.state = 'Maharashtra' THEN 'ROM'
+      ELSE spb.state
+    END AS state,
     spb.pub_name,
     spb.finalschdt
   FROM stage_print_base spb
   LEFT JOIN stage_mapping_ppl_caption_bu mpc
     ON spb.caption = mpc.caption
+),
+stage_print_enriched_mumbai AS (
+  SELECT
+    mpc.bu,
+    spb.caption,
+    mpc.ppl,
+    CASE 
+      WHEN spb.state = 'Maharashtra' THEN 'Mumbai'
+      ELSE spb.state
+    END AS state,
+    spb.pub_name,
+    spb.finalschdt
+  FROM stage_print_base spb
+  LEFT JOIN stage_mapping_ppl_caption_bu mpc
+    ON spb.caption = mpc.caption
+),
+stage_print_enriched AS (
+  SELECT DISTINCT bu, caption, ppl, state, pub_name, finalschdt
+  FROM (
+    SELECT * FROM stage_print_enriched_rom
+    UNION
+    SELECT * FROM stage_print_enriched_mumbai
+  )
 ),
 stage_print_grouped AS (
   SELECT
@@ -83,7 +109,11 @@ stage_print_windows_all_captions AS (
 stage_ev_filtered AS (
   SELECT
     CAST(e.{ev_ppl_column} AS STRING) AS ppl,
-    CAST(e.{ev_state_column} AS STRING) AS state,
+    CASE 
+      WHEN e.{ev_state_column} = 'Maharashtra' AND LOWER(e.{ev_city_column}) = 'mumbai' THEN 'Mumbai'
+      WHEN e.{ev_state_column} = 'Maharashtra' AND LOWER(e.{ev_city_column}) != 'mumbai' THEN 'ROM'
+      ELSE CAST(e.{ev_state_column} AS STRING)
+    END AS state,
     CAST(e.{ev_zone_column} AS STRING) AS zone,
     DATE(e.{ev_date_column}) AS event_date,
     SAFE_CAST(e.{ev_metric_column} AS FLOAT64) AS gf_opportunity_created
@@ -94,7 +124,11 @@ stage_ev_filtered AS (
 stage_contract_filtered AS (
   SELECT
     CAST(c.{contract_ppl_column} AS STRING) AS ppl,
-    CAST(c.{contract_state_column} AS STRING) AS state,
+    CASE 
+      WHEN c.{contract_state_column} = 'Maharashtra' AND LOWER(c.{contract_city_column}) = 'mumbai' THEN 'Mumbai'
+      WHEN c.{contract_state_column} = 'Maharashtra' AND LOWER(c.{contract_city_column}) != 'mumbai' THEN 'ROM'
+      ELSE CAST(c.{contract_state_column} AS STRING)
+    END AS state,
     CAST(c.{contract_zone_column} AS STRING) AS zone,
     DATE(c.{contract_date_column}) AS event_date,
     SAFE_CAST(c.{contract_metric_column} AS FLOAT64) AS gf_opportunity_created

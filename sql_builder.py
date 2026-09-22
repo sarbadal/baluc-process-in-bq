@@ -40,6 +40,7 @@ def build_bq_sql_script(config: dict[str, str | int], output_gcs_uri: str) -> st
     ev_date_column = str(config["ev_date_column"])
     ev_ppl_column = str(config["ev_ppl_column"])
     ev_state_column = str(config["ev_state_column"])
+    ev_city_column = str(config["ev_city_column"])
     ev_zone_column = str(config["ev_zone_column"])
     ev_source_column = str(config["ev_source_column"])
     ev_metric_column = str(config["ev_metric_column"])
@@ -47,6 +48,7 @@ def build_bq_sql_script(config: dict[str, str | int], output_gcs_uri: str) -> st
     contract_date_column = str(config["contract_date_column"])
     contract_ppl_column = str(config["contract_ppl_column"])
     contract_state_column = str(config["contract_state_column"])
+    contract_city_column = str(config["contract_city_column"])
     contract_zone_column = str(config["contract_zone_column"])
     contract_source_column = str(config["contract_source_column"])
     contract_metric_column = str(config["contract_metric_column"])
@@ -77,12 +79,14 @@ def build_bq_sql_script(config: dict[str, str | int], output_gcs_uri: str) -> st
         print_date_column=print_date_column,
         ev_ppl_column=ev_ppl_column,
         ev_state_column=ev_state_column,
+        ev_city_column=ev_city_column,
         ev_zone_column=ev_zone_column,
         ev_date_column=ev_date_column,
         ev_metric_column=ev_metric_column,
         ev_source_column=ev_source_column,
         contract_ppl_column=contract_ppl_column,
         contract_state_column=contract_state_column,
+        contract_city_column=contract_city_column,
         contract_zone_column=contract_zone_column,
         contract_date_column=contract_date_column,
         contract_metric_column=contract_metric_column,

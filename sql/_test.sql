@@ -65,6 +65,21 @@ stage_print_windows AS (
     DATE_ADD(finalschdt, INTERVAL 2 DAY) AS date_p2
   FROM stage_print_grouped
 ),
+stage_print_windows_all_captions AS (
+  SELECT DISTINCT
+    'All' AS bu,
+    'All' AS caption,
+    'All' AS ppl,
+    state,
+    'All' AS pub_name,
+    finalschdt,
+    DATE_SUB(finalschdt, INTERVAL 2 DAY) AS date_m2,
+    DATE_SUB(finalschdt, INTERVAL 1 DAY) AS date_m1,
+    finalschdt AS date_t,
+    DATE_ADD(finalschdt, INTERVAL 1 DAY) AS date_p1,
+    DATE_ADD(finalschdt, INTERVAL 2 DAY) AS date_p2
+  FROM stage_print_grouped
+),
 stage_ev_filtered AS (
   SELECT
     CAST(e.{ev_ppl_column} AS STRING) AS ppl,
@@ -127,7 +142,146 @@ stage_ev_contract_combined AS (
   )
   GROUP BY 1, 2, 3, 4
 ),
-stage_final_report AS (
+stage_ev_all AS (
+  SELECT 
+    'All' AS bu,
+    'All' AS caption,
+    'All' AS ppl,
+    event_date, 
+    state,
+    SUM(gf_opportunity_created) AS total_gf_opportunity_created
+  FROM stage_ev_filtered
+  GROUP BY event_date, state
+),
+stage_contract_all AS (
+  SELECT 
+    'All' AS bu,
+    'All' AS caption,
+    'All' AS ppl,
+    event_date, 
+    state,
+    SUM(gf_opportunity_created) AS total_gf_opportunity_created
+  FROM stage_contract_filtered
+  GROUP BY event_date, state
+),
+stage_final_report_all AS (
+  SELECT 
+      p.bu,
+      p.caption,
+      p.ppl, 
+      p.state,
+      p.pub_name,
+      p.finalschdt AS date,
+      ev_m2.total_gf_opportunity_created AS ev_enquery_count_date_m2,
+      ev_m1.total_gf_opportunity_created AS ev_enquery_count_date_m1,
+      ev_t.total_gf_opportunity_created AS ev_enquery_count_date_t,
+      ev_p1.total_gf_opportunity_created AS ev_enquery_count_date_p1,
+      ev_p2.total_gf_opportunity_created AS ev_enquery_count_date_p2,
+      CASE
+      WHEN ev_m2.total_gf_opportunity_created IS NULL
+        AND ev_m1.total_gf_opportunity_created IS NULL THEN NULL
+      ELSE (COALESCE(ev_m2.total_gf_opportunity_created, 0) + COALESCE(ev_m1.total_gf_opportunity_created, 0)) / 2
+    END AS ev_perf_enquery_count_date_m2_m1_avg,
+    ev_t.total_gf_opportunity_created AS ev_perf_enquery_count_date_t_avg,
+    CASE
+      WHEN ev_p2.total_gf_opportunity_created IS NULL
+        AND ev_p1.total_gf_opportunity_created IS NULL THEN NULL
+      ELSE (COALESCE(ev_p2.total_gf_opportunity_created, 0) + COALESCE(ev_p1.total_gf_opportunity_created, 0)) / 2
+    END AS ev_perf_enquery_count_date_p2_p1_avg,
+    IFNULL(
+      SAFE_DIVIDE(
+        COALESCE(ev_t.total_gf_opportunity_created, 0),
+        CASE
+          WHEN ev_m2.total_gf_opportunity_created IS NULL
+            AND ev_m1.total_gf_opportunity_created IS NULL THEN NULL
+          ELSE (COALESCE(ev_m2.total_gf_opportunity_created, 0) + COALESCE(ev_m1.total_gf_opportunity_created, 0)) / 2
+        END
+      ) - 1,
+      0
+    ) AS ev_growth_enquery_count_date_t_vs_m2_avg,
+    IFNULL(
+      SAFE_DIVIDE(
+        CASE
+          WHEN ev_p2.total_gf_opportunity_created IS NULL
+            AND ev_p1.total_gf_opportunity_created IS NULL THEN NULL
+          ELSE (COALESCE(ev_p2.total_gf_opportunity_created, 0) + COALESCE(ev_p1.total_gf_opportunity_created, 0)) / 2
+        END,
+        COALESCE(ev_t.total_gf_opportunity_created, 0)
+      ) - 1,
+      0
+    ) AS ev_growth_enquery_count_date_p2_vs_t_avg,
+    pv_m2.total_gf_opportunity_created AS pv_enquery_count_date_m2,
+    pv_m1.total_gf_opportunity_created AS pv_enquery_count_date_m1,
+    pv_t.total_gf_opportunity_created AS pv_enquery_count_date_t,
+    pv_p1.total_gf_opportunity_created AS pv_enquery_count_date_p1,
+    pv_p2.total_gf_opportunity_created AS pv_enquery_count_date_p2,
+    CASE
+      WHEN pv_m2.total_gf_opportunity_created IS NULL
+        AND pv_m1.total_gf_opportunity_created IS NULL THEN NULL
+      ELSE (COALESCE(pv_m2.total_gf_opportunity_created, 0) + COALESCE(pv_m1.total_gf_opportunity_created, 0)) / 2
+    END AS pv_perf_enquery_count_date_m2_m1_avg,
+    pv_t.total_gf_opportunity_created AS pv_perf_enquery_count_date_t_avg,
+    CASE
+      WHEN pv_p2.total_gf_opportunity_created IS NULL
+        AND pv_p1.total_gf_opportunity_created IS NULL THEN NULL
+      ELSE (COALESCE(pv_p2.total_gf_opportunity_created, 0) + COALESCE(pv_p1.total_gf_opportunity_created, 0)) / 2
+    END AS pv_perf_enquery_count_date_p2_p1_avg,
+    IFNULL(
+      SAFE_DIVIDE(
+        COALESCE(pv_t.total_gf_opportunity_created, 0),
+        CASE
+          WHEN pv_m2.total_gf_opportunity_created IS NULL
+            AND pv_m1.total_gf_opportunity_created IS NULL THEN NULL
+          ELSE (COALESCE(pv_m2.total_gf_opportunity_created, 0) + COALESCE(pv_m1.total_gf_opportunity_created, 0)) / 2
+        END
+      ) - 1,
+      0
+    ) AS pv_growth_enquery_count_date_t_vs_m2_avg,
+    IFNULL(
+      SAFE_DIVIDE(
+        CASE
+          WHEN pv_p2.total_gf_opportunity_created IS NULL
+            AND pv_p1.total_gf_opportunity_created IS NULL THEN NULL
+          ELSE (COALESCE(pv_p2.total_gf_opportunity_created, 0) + COALESCE(pv_p1.total_gf_opportunity_created, 0)) / 2
+        END,
+        COALESCE(pv_t.total_gf_opportunity_created, 0)
+      ) - 1,
+      0
+    ) AS pv_growth_enquery_count_date_p2_vs_t_avg,
+    0 AS evc_enquery_count_date_m2,
+    0 AS evc_enquery_count_date_m1,
+    0 AS evc_enquery_count_date_t,
+    0 AS evc_enquery_count_date_p1,
+    0 AS evc_enquery_count_date_p2,
+    0 AS evc_perf_enquery_count_date_m2_m1_avg,
+    0 AS evc_perf_enquery_count_date_t_avg,
+    0 AS evc_perf_enquery_count_date_p2_p1_avg,
+    0 AS evc_growth_enquery_count_date_t_vs_m2_avg,
+    0 AS evc_growth_enquery_count_date_p2_vs_t_avg
+
+    FROM stage_print_windows_all_captions p
+  LEFT JOIN stage_ev_all ev_m2
+    ON p.ppl = ev_m2.ppl AND p.caption = ev_m2.caption AND p.state = ev_m2.state AND p.date_m2 = ev_m2.event_date
+  LEFT JOIN stage_ev_all ev_m1
+    ON p.ppl = ev_m1.ppl AND p.caption = ev_m1.caption AND p.state = ev_m1.state AND p.date_m1 = ev_m1.event_date
+  LEFT JOIN stage_ev_all ev_t
+    ON p.ppl = ev_t.ppl AND p.caption = ev_t.caption AND p.state = ev_t.state AND p.date_t = ev_t.event_date
+  LEFT JOIN stage_ev_all ev_p1
+    ON p.ppl = ev_p1.ppl AND p.caption = ev_p1.caption AND p.state = ev_p1.state AND p.date_p1 = ev_p1.event_date
+  LEFT JOIN stage_ev_all ev_p2
+    ON p.ppl = ev_p2.ppl AND p.caption = ev_p2.caption AND p.state = ev_p2.state AND p.date_p2 = ev_p2.event_date
+  LEFT JOIN stage_contract_all pv_m2
+    ON p.ppl = pv_m2.ppl AND p.caption = pv_m2.caption AND p.state = pv_m2.state AND p.date_m2 = pv_m2.event_date
+  LEFT JOIN stage_contract_all pv_m1
+    ON p.ppl = pv_m1.ppl AND p.caption = pv_m1.caption AND p.state = pv_m1.state AND p.date_m1 = pv_m1.event_date
+  LEFT JOIN stage_contract_all pv_t
+    ON p.ppl = pv_t.ppl AND p.caption = pv_t.caption AND p.state = pv_t.state AND p.date_t = pv_t.event_date
+  LEFT JOIN stage_contract_all pv_p1
+    ON p.ppl = pv_p1.ppl AND p.caption = pv_p1.caption AND p.state = pv_p1.state AND p.date_p1 = pv_p1.event_date
+  LEFT JOIN stage_contract_all pv_p2
+    ON p.ppl = pv_p2.ppl AND p.caption = pv_p2.caption AND p.state = pv_p2.state AND p.date_p2 = pv_p2.event_date
+),
+stage_final_report_caption AS (
   SELECT
     '--' AS bu,
     p.caption,
@@ -284,7 +438,13 @@ stage_final_report AS (
     ON p.ppl = evc_p1.ppl AND p.caption = evc_p1.caption AND p.state = evc_p1.state AND p.date_p1 = evc_p1.event_date
   LEFT JOIN stage_ev_contract_combined evc_p2
     ON p.ppl = evc_p2.ppl AND p.caption = evc_p2.caption AND p.state = evc_p2.state AND p.date_p2 = evc_p2.event_date
+),
+stage_final_report AS (
+  SELECT * FROM stage_final_report_all
+  UNION ALL
+  SELECT * FROM stage_final_report_caption
 )
+-- Final report combining all and caption-specific reports
 SELECT *
 FROM stage_final_report
 ORDER BY caption, ppl, state, pub_name, date
