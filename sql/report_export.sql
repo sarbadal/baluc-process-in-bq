@@ -60,9 +60,9 @@ stage_print_enriched AS (
   SELECT DISTINCT bu, caption, ppl, state, pub_name, finalschdt
   FROM (
     SELECT * FROM stage_print_enriched_rom
-    UNION
+    UNION ALL
     SELECT * FROM stage_print_enriched_mumbai
-  )
+  ) AS combined_print_enriched
 ),
 stage_print_grouped AS (
   SELECT
